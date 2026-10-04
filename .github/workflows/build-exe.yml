@@ -1,0 +1,155 @@
+name: Build Pathology Report Generator
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-windows-exe:
+
+    runs-on: windows-latest
+
+    steps:
+
+      # 1. Get source code
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # 2. Install Java 21
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # 3. Install Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: pathology-report-app/package-lock.json
+
+      # 4. Build React application
+      - name: Build React
+        working-directory: pathology-report-app
+        run: |
+          npm ci
+          npm run build
+
+      # 5. Copy React build into Spring Boot static folder
+      - name: Copy React build
+        shell: powershell
+        run: |
+          Remove-Item "pathology-report-api/src/main/resources/static" `
+            -Recurse `
+            -Force `
+            -ErrorAction SilentlyContinue
+
+          New-Item `
+            -ItemType Directory `
+            "pathology-report-api/src/main/resources/static" `
+            -Force
+
+          Copy-Item `
+            "pathology-report-app/dist/*" `
+            "pathology-report-api/src/main/resources/static/" `
+            -Recurse `
+            -Force
+
+      # 6. Build Spring Boot
+      - name: Build Spring Boot
+        working-directory: pathology-report-api
+        run: |
+          .\mvnw.cmd clean package -DskipTests
+
+      # 7. Compile launcher
+      - name: Compile Pathology Launcher
+        working-directory: PathoApp
+        run: |
+          javac PathologyLauncher.java
+
+      # 8. Prepare launcher input
+      - name: Prepare launcher JAR
+        working-directory: PathoApp
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory package-input -Force
+
+          Copy-Item `
+            "../pathology-report-api/target/pathology-report-api-0.0.1-SNAPSHOT.jar" `
+            "./pathology-report-api-0.0.1-SNAPSHOT.jar" `
+            -Force
+
+          Copy-Item `
+            "./PathologyLauncher.class" `
+            "./package-input/" `
+            -Force
+
+          Copy-Item `
+            "./pathology-report-api-0.0.1-SNAPSHOT.jar" `
+            "./package-input/" `
+            -Force
+
+      # 9. Create launcher JAR
+      - name: Create Launcher JAR
+        working-directory: PathoApp
+        shell: powershell
+        run: |
+          jar --create `
+            --file launcher.jar `
+            --main-class PathologyLauncher `
+            -C package-input PathologyLauncher.class `
+            -C package-input pathology-report-api-0.0.1-SNAPSHOT.jar
+
+      # 10. Create custom Java runtime
+      - name: Create Java Runtime
+        working-directory: PathoApp
+        shell: powershell
+        run: |
+          Remove-Item "./custom-runtime" `
+            -Recurse `
+            -Force `
+            -ErrorAction SilentlyContinue
+
+          jlink `
+            --module-path "$env:JAVA_HOME\jmods" `
+            --add-modules java.base,java.desktop,java.logging,java.sql,java.naming,java.management,java.security.jgss,java.instrument,jdk.crypto.ec `
+            --output "./custom-runtime" `
+            --strip-debug `
+            --no-header-files `
+            --no-man-pages
+
+      # 11. Create Windows application
+      - name: Create Windows EXE
+        working-directory: PathoApp
+        shell: powershell
+        run: |
+          Remove-Item "./package-output" `
+            -Recurse `
+            -Force `
+            -ErrorAction SilentlyContinue
+
+          New-Item `
+            -ItemType Directory `
+            "./package-output" `
+            -Force
+
+          jpackage `
+            --type app-image `
+            --name "Pathology Report Generator" `
+            --input "." `
+            --main-jar launcher.jar `
+            --main-class PathologyLauncher `
+            --runtime-image "./custom-runtime" `
+            --dest "./package-output" `
+            --win-console
+
+      # 12. Upload application
+      - name: Upload Windows Application
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pathology-Report-Generator-Windows
+          path: "PathoApp/package-output/Pathology Report Generator/"
