@@ -122,7 +122,7 @@ jobs:
             --no-header-files `
             --no-man-pages
 
-      # 11. Create Windows application
+            # 11. Create Windows application
       - name: Create Windows EXE
         working-directory: PathoApp
         shell: powershell
@@ -132,15 +132,30 @@ jobs:
             -Force `
             -ErrorAction SilentlyContinue
 
+          Remove-Item "./package-input" `
+            -Recurse `
+            -Force `
+            -ErrorAction SilentlyContinue
+
+          New-Item `
+            -ItemType Directory `
+            "./package-input" `
+            -Force
+
           New-Item `
             -ItemType Directory `
             "./package-output" `
             -Force
 
+          Copy-Item `
+            "./launcher.jar" `
+            "./package-input/launcher.jar" `
+            -Force
+
           jpackage `
             --type app-image `
             --name "Pathology Report Generator" `
-            --input "." `
+            --input "./package-input" `
             --main-jar launcher.jar `
             --main-class PathologyLauncher `
             --runtime-image "./custom-runtime" `
