@@ -1,0 +1,91 @@
+# ==============================
+
+# React / Node
+
+# ==============================
+
+pathology-report-app/node_modules/
+pathology-report-app/dist/
+pathology-report-app/.vite/
+
+# npm logs
+
+pathology-report-app/npm-debug.log*
+pathology-report-app/yarn-debug.log*
+pathology-report-app/yarn-error.log*
+
+# ==============================
+
+# Spring Boot / Maven
+
+# ==============================
+
+pathology-report-api/target/
+
+# Maven wrapper generated files
+
+pathology-report-api/.mvn/wrapper/maven-wrapper.jar
+
+# ==============================
+
+# IDEs
+
+# ==============================
+
+.idea/
+*.iml
+
+.vscode/
+
+# Eclipse
+
+.classpath
+.project
+.settings/
+
+# ==============================
+
+# Operating System
+
+# ==============================
+
+.DS_Store
+Thumbs.db
+
+# ==============================
+
+# Logs
+
+# ==============================
+
+*.log
+
+# ==============================
+
+# Environment / Secrets
+
+# ==============================
+
+.env
+.env.*
+!.env.example
+
+# ==============================
+
+# Generated installers
+
+# ==============================
+
+*.exe
+*.msi
+
+
+# ==============================
+# Pathology Application Packaging
+# ==============================
+
+PathoApp/custom-runtime/
+PathoApp/package-output/
+PathoApp/package-input/*.jar
+PathoApp/*.jar
+PathoApp/*.class
